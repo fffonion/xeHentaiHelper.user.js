@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.07
+// @version     0.13
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
@@ -72,7 +72,7 @@
         var gd5 = document.getElementById("gd5");
         if(gd5){ // gallery page
             var p = document.createElement("p");
-            p.innerHTML = '<img src="http://ehgt.org/g/mr.gif"> <a id="xeh_addtask" href="#">添加到xeHentai</a>';
+            p.innerHTML = '<img src="https://ehgt.org/g/mr.gif"> <a id="xeh_addtask" href="#">添加到xeHentai</a>';
             p.className = "g2";
             p.onclick = function(){
                 if (document.cookie.indexOf("ipb_pass_hash") != -1 && document.cookie.indexOf("ipb_member_id") != -1){
@@ -80,29 +80,42 @@
                 }
                 jr.addTask(location.protocol+'//'+location.host+location.pathname, {});
             };
+            gd5.childNodes[gd5.childNodes.length-1].className = "g2";
             gd5.appendChild(p);
         }
-        var it3s = document.getElementsByClassName("it3");
-        if(it3s && it3s.length){ // index page
-            var it5s = document.getElementsByClassName("it5");
+        var glnames = document.getElementsByClassName("glname");
+        if(glnames && glnames.length){ // index page
+            var inp_onclick = function(e){ e.stopPropagation() };
             var allinps = [];
-            for (var i = 0; i < it3s.length; ++i) {
+            for (var i = 0; i < glnames.length; ++i) {
+                var glname = glnames[i];
                 var ip = document.createElement("input");
                 ip.type = "checkbox";
-                ip.style= "float:left";
-                ip.value = decodeURIComponent(it5s[i].childNodes[0].href);
-                it3s[i].parentNode.insertBefore(ip, it3s[i]);
+                ip.style= "float:left;font-size:20px;top:0;";
+                console.log(glname);
+                ip.value = decodeURIComponent(glname.childNodes[0].href || glname.childNodes[0].childNodes[0].href);
+                ip.onclick = inp_onclick;
+                glname.childNodes[0].insertBefore(ip, glname.childNodes[0].childNodes[0]);
                 allinps.push(ip);
             }
-            var titlebar = document.getElementsByClassName("itg")[0].childNodes[1].childNodes[0];
-            titlebar.childNodes[2].innerHTML = '<input type="checkbox" id="xeh_toogle">反选</input>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' +
-                '<a href="#" id="xeh_export">导出选中项到xeHentai</a>';
-            document.getElementById("xeh_toogle").onclick=function(s){
+            var titlebar = document.getElementsByClassName("itg")[0].childNodes[0].childNodes[0];
+            var titleInnerHTML = '<input type="checkbox" id="xeh_toogle" style="margin-left:9px;top:0;">反选</input>' +
+                '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="xeh_export" href="#">导出选中项到xeHentai</a>';
+            if (glnames[0].className.search(/gl\d[te]/) != -1){ // extended or thumbail mode
+                var td = document.createElement("td");
+                td.innerHTML = titleInnerHTML;
+                td.style = "width: auto;position: absolute;left: 10px;font-size: 12px;";
+                var tr = document.getElementsByClassName("ptt")[0].childNodes[0].childNodes[0]
+                tr.insertBefore(td, tr.childNodes[0]);
+            } else {
+                titlebar.childNodes[2].innerHTML = titleInnerHTML;
+            }
+            document.getElementById("xeh_toogle").onclick = function(s){
                 for (var i = 0; i < allinps.length; ++i) {
                     allinps[i].checked = !allinps[i].checked;
                 }
             };
-            document.getElementById("xeh_export").onclick=function(s){
+            document.getElementById("xeh_export").onclick = function(s){
                 if (document.cookie.indexOf("ipb_pass_hash") != -1 && document.cookie.indexOf("ipb_member_id") != -1){
                     jr.setCookie(document.cookie);
                 }
@@ -115,9 +128,4 @@
         }
     })(XEH);
 })();
-
-
-
-
-
 
