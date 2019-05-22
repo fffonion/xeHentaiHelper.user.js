@@ -22,3 +22,7 @@
 ### 使用
 
 你會在紳士站的網頁上看到`添加到xeHentai`的按鈕和菜單
+
+### 投票新功能
+
+[![Feature Requests](http://feathub.com/fffonion/xeHentaiHelper.user.js?format=svg)](http://feathub.com/fffonion/xeHentaiHelper.user.js)

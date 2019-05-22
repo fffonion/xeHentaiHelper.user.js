@@ -22,3 +22,7 @@ Click on this [url](https://github.com/fffonion/xeHentaiHelper.user.js/raw/maste
 ### Usage
 
 You'll see extra buttons and menus on the website!
+
+### Request a feature
+
+[![Feature Requests](http://feathub.com/fffonion/xeHentaiHelper.user.js?format=svg)](http://feathub.com/fffonion/xeHentaiHelper.user.js)
