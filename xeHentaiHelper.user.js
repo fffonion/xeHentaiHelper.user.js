@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.23
+// @version     0.27
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
@@ -17,6 +17,8 @@
 // @grant       GM.setValue
 // @grant       GM.deleteValue
 // @grant       GM.xmlHttpRequest
+// @homepageURL  https://github.com/fffonion/xeHentaiHelper.user.js
+// @supportURL   https://github.com/fffonion/xeHentaiHelper.user.js/issues
 // ==/UserScript==
 
 // ==== ARIA2 class taken from Binux's ThunderLixianExported === //
@@ -46,14 +48,38 @@
             if (auth && auth.indexOf('token:') != 0) {
                 headers["Authorization"] = "Basic " + btoa(auth);
             }
-            GM_xmlHttpRequest({
-                method: "POST",
-                url: jsonrpc_path + "?tm=" + (new Date()).getTime().toString(),
-                headers: headers,
-                data: JSON.stringify(request_obj),
-                onerror: function(e) { console.error(method, params[0], params[1], "=>", e) },
-                onload: function(r) { console.info(method, params[0], params[1], "=>", JSON.parse(r.responseText)) },
-            })
+            var err = function () {
+                console.error(method, params[params.length-2], params[params.length-1], "=>")
+            };
+            var r;
+            if (jsonrpc_path.match(/\/\/localhost:/)) {
+                // there's not CORS on both sites, we only need GM_xmlHttpRequest
+                // to bypass insecure http downgrade error
+                // but chrome is happy to send to http://localhost
+                // use original XHR gives us better error message
+                r = GM_xmlHttpRequest_fallback;
+            } else {
+                r = GM_xmlHttpRequest;
+            }
+            new Promise((_, reject) => {
+                try {
+                    r({
+                        method: "POST",
+                        url: jsonrpc_path + "?tm=" + (new Date()).getTime().toString(),
+                        headers: headers,
+                        data: JSON.stringify(request_obj),
+                        onerror: err,
+                        onabort: err,
+                        ontimeout: err,
+                        onload: function (r) {
+                            console.info(method, params[params.length-2], params[params.length-1]
+                                    , "=>", JSON.parse(r.responseText))
+                        },
+                    })
+                } catch (error) {
+                    reject(error);
+                }
+            });
         };
 
         return function (jsonrpc_path) {
@@ -115,22 +141,24 @@
             return delete localStorage[key];
         };
     }
+    var GM_xmlHttpRequest_fallback = function (opts) {
+        var xhr = new XMLHttpRequest();
+        xhr.open(opts.method, opts.url, !opts.synchronous);
+        for (let key in opts.headers || {}) {
+            xhr.setRequestHeader(key, opts.headers[key]);
+        }
+        xhr.onerror = opts.onerror;
+        xhr.onabort = opts.onabort;
+        xhr.onload = function () {
+            if (xhr.readyState === xhr.DONE) {
+                opts.onload(xhr);
+            }
+        }
+        xhr.send(opts.data);
+    }
     if (!this.GM_xmlHttpRequest) {
         console.info("[XEH] using fallback XHR")
-        this.GM_xmlHttpRequest = function(opts) {
-            var xhr = new XMLHttpRequest();
-            xhr.open(opts.method, opts.url, !opts.synchronous);
-            for(let key in opts.headers || {}) {
-                xhr.setRequestHeader(key, opts.headers[key]);
-            }
-            xhr.onerror = opts.onerror;
-            xhr.onload = function() {
-                if (xhr.readyState === xhr.DONE) {
-                    opts.onload(xhr);
-                }
-            }
-            xhr.send(opts.data);
-        }
+        this.GM_xmlHttpRequest = GM_xmlHttpRequest_fallback;
     }
 
     XEH = {
@@ -288,7 +316,7 @@
 
             function loadConfigSet(i) {
                 if (XEH.configs === undefined) {
-                    XEH.configs = JSON.parse(GM_getValue("xeh_configs", "{}"));
+                    XEH.configs = JSON.parse(GM_getValue("xeh_configs", "[]"));
                 }
                 if (XEH.configs.length === 0) {
                     XEH.configs = [{
@@ -374,7 +402,7 @@
             var delBtn = newButton("删除", "left: 70px; bottom: 5px;", function () {
                 var i = configSet.selectedIndex;
                 configSet.remove(i);
-                configSet.selectedIndex = Math.max(i-1, 0);
+                configSet.selectedIndex = Math.max(i - 1, 0);
                 hasNewConfigUnsaved = false;
                 XEH.configs.splice(i);
                 saveConfigSet(configSet);
@@ -436,13 +464,17 @@
                 delBtn.addEventListener("click", function () {
                     var i = configSet2.selectedIndex;
                     configSet2.remove(i);
-                    configSet2.selectedIndex = Math.max(i-1, 0);
+                    configSet2.selectedIndex = Math.max(i - 1, 0);
                 });
                 ojbkBtn.addEventListener("click", function () {
                     var i = configSet.selectedIndex;
-                    var c = document.createElement("option");
-                    c.text = XEH.configs[i].name;
-                    configSet2.options.add(c);
+                    if (i >= configSet2.options.length) {
+                        var c = document.createElement("option");
+                        c.text = XEH.configs[i].name;
+                        configSet2.options.add(c);
+                    } else {
+                        configSet2.options.item(i).text = XEH.configs[i].name;
+                    }
                     configSet2.selectedIndex = i;
                 });
                 xehExportAnchor.parentNode.appendChild(configSet2);
