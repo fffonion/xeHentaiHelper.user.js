@@ -1,49 +1,25 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.20
+// @version     0.23
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
 // @downloadURL https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
-// @include     http*://*e-hentai.org/
-// @include     http*://*e-hentai.org/#
-// @include     http*://*e-hentai.org/?*
-// @include     http*://*e-hentai.org/g/*
-// @include     http*://*e-hentai.org/tag/*
-// @include     http*://*e-hentai.org/uploader/*
-// @include     http*://exhentai.org/
-// @include     http*://exhentai.org/#
-// @include     http*://exhentai.org/?*
-// @include     http*://exhentai.org/g/*
-// @include     http*://exhentai.org/tag/*
-// @include     http*://exhentai.org/uploader/*
-// @include     http*://*e-hentai.org/non-h
-// @include     http*://*e-hentai.org/misc
-// @include     http*://*e-hentai.org/doujinshi
-// @include     http*://*e-hentai.org/western
-// @include     http*://*e-hentai.org/manga
-// @include     http*://*e-hentai.org/imageset
-// @include     http*://*e-hentai.org/artistcg
-// @include     http*://*e-hentai.org/cosplay
-// @include     http*://*e-hentai.org/gamecg
-// @include     http*://*e-hentai.org/asianporn
-// @include     http*://exhentai.org/non-h
-// @include     http*://exhentai.org/misc
-// @include     http*://exhentai.org/doujinshi
-// @include     http*://exhentai.org/western
-// @include     http*://exhentai.org/manga
-// @include     http*://exhentai.org/imageset
-// @include     http*://exhentai.org/artistcg
-// @include     http*://exhentai.org/cosplay
-// @include     http*://exhentai.org/gamecg
-// @include     http*://exhentai.org/asianporn
+// @include     http*://*e-hentai.org/*
+// @include     http*://exhentai.org/*
 // @license     GNU General Public License (GPL)
 // @run-at      document-end
-// @grant none
+// @grant       GM_getValue
+// @grant       GM_setValue
+// @grant       GM_deleteValue
+// @grant       GM_xmlHttpRequest
+// @grant       GM.getValue
+// @grant       GM.setValue
+// @grant       GM.deleteValue
+// @grant       GM.xmlHttpRequest
 // ==/UserScript==
 
 // ==== ARIA2 class taken from Binux's ThunderLixianExported === //
-
 (function () {
     var JSONRPC = (function () {
         var jsonrpc_version = '2.0';
@@ -53,7 +29,6 @@
         };
 
         function request(jsonrpc_path, method, params) {
-            var xhr = new XMLHttpRequest();
             var auth = get_auth(jsonrpc_path);
             jsonrpc_path = jsonrpc_path.replace(/^((?![^:@]+:[^:@\/]*@)[^:\/?#.]+:)?(\/\/)?(?:(?:[^:@]*(?::[^:@]*)?)?@)?(.*)/, '$1$2$3'); // auth string not allowed in url for firefox
 
@@ -65,12 +40,20 @@
             if (params) request_obj.params = params;
             if (auth && auth.indexOf('token:') == 0) params.unshift(auth);
 
-            xhr.open("POST", jsonrpc_path + "?tm=" + (new Date()).getTime().toString(), true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            if (auth && auth.indexOf('token:') != 0) {
-                xhr.setRequestHeader("Authorization", "Basic " + btoa(auth));
+            var headers = {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             }
-            xhr.send(JSON.stringify(request_obj));
+            if (auth && auth.indexOf('token:') != 0) {
+                headers["Authorization"] = "Basic " + btoa(auth);
+            }
+            GM_xmlHttpRequest({
+                method: "POST",
+                url: jsonrpc_path + "?tm=" + (new Date()).getTime().toString(),
+                headers: headers,
+                data: JSON.stringify(request_obj),
+                onerror: function(e) { console.error(method, params[0], params[1], "=>", e) },
+                onload: function(r) { console.info(method, params[0], params[1], "=>", JSON.parse(r.responseText)) },
+            })
         };
 
         return function (jsonrpc_path) {
@@ -107,11 +90,47 @@
 
     function newButton(label, style, f) {
         var btn = document.createElement("div");
-        btn.innerHTML = "<a href='#'>" + label + "</a>";
+        btn.innerHTML = "<a href='javascript:void(0)'>" + label + "</a>";
         btn.style = "position: absolute; " + (style || "");
         btn.onclick = f;
         btn.className = "gt";
         return btn;
+    }
+
+    if (GM !== undefined) {
+        this.GM_getValue = GM.getValue;
+        this.GM_setValue = GM.setValue;
+        this.GM_deleteValue = GM.deleteValue;
+        this.GM_xmlHttpRequest = GM.xmlHttpRequest;
+    }
+    if (!this.GM_getValue || (this.GM_getValue.toString && this.GM_getValue.toString().indexOf("not supported") > -1)) {
+        console.info("[XEH] using fallback set/getValue")
+        this.GM_getValue = function (key, def) {
+            return localStorage[key] || def;
+        };
+        this.GM_setValue = function (key, value) {
+            return localStorage[key] = value;
+        };
+        this.GM_deleteValue = function (key) {
+            return delete localStorage[key];
+        };
+    }
+    if (!this.GM_xmlHttpRequest) {
+        console.info("[XEH] using fallback XHR")
+        this.GM_xmlHttpRequest = function(opts) {
+            var xhr = new XMLHttpRequest();
+            xhr.open(opts.method, opts.url, !opts.synchronous);
+            for(let key in opts.headers || {}) {
+                xhr.setRequestHeader(key, opts.headers[key]);
+            }
+            xhr.onerror = opts.onerror;
+            xhr.onload = function() {
+                if (xhr.readyState === xhr.DONE) {
+                    opts.onload(xhr);
+                }
+            }
+            xhr.send(opts.data);
+        }
     }
 
     XEH = {
@@ -137,19 +156,17 @@
         var glnames = document.getElementsByClassName("glname");
         if (glnames && glnames.length) { // index page
             function saveInputState() {
-                if (!localStorage) return;
                 var checked = {};
                 for (var i = 0; i < allinps.length; ++i) {
                     if (allinps[i].checked) {
                         checked[allinps[i].value] = 1;
                     }
                 }
-                localStorage.setItem("xeh_checked", JSON.stringify(checked));
+                GM_setValue("xeh_checked", JSON.stringify(checked));
             }
 
             function loadInputState() {
-                if (!localStorage) return;
-                var checked = JSON.parse(localStorage.getItem("xeh_checked"));
+                var checked = JSON.parse(GM_getValue("xeh_checked", "0"));
                 if (!checked) return;
                 for (var i = 0; i < allinps.length; ++i) {
                     if (checked[allinps[i].value] === 1) {
@@ -231,6 +248,10 @@
         // config
         var titleBar = document.getElementById("nb");
         if (titleBar) {
+            // increase width for exhentai
+            if (titleBar.childElementCount < 10) {
+                titleBar.style.maxWidth = "750px";
+            }
             var div = document.createElement("div");
             div.innerHTML = '<div><a>xeHentai</a></div>';
             div.onclick = function () {
@@ -260,33 +281,38 @@
             XEH.configs = undefined;
             var inputs = {};
 
-            function saveConfigSet() {
-                if (!localStorage) return;
-                localStorage.setItem("xeh_configs", JSON.stringify(XEH.configs));
-                localStorage.setItem("xeh_config_idx", configSet.selectedIndex);
+            function saveConfigSet(who) {
+                GM_setValue("xeh_configs", JSON.stringify(XEH.configs));
+                GM_setValue("xeh_config_idx", who.selectedIndex);
             }
 
             function loadConfigSet(i) {
                 if (XEH.configs === undefined) {
-                    if (!localStorage) return;
-                    XEH.configs = JSON.parse(localStorage.getItem("xeh_configs")) || [{
+                    XEH.configs = JSON.parse(GM_getValue("xeh_configs", "{}"));
+                }
+                if (XEH.configs.length === 0) {
+                    XEH.configs = [{
                         "host": "localhost",
-                        "port": 8090,
+                        "port": 8010,
                         "name": "<默认>"
                     }];
                 }
                 if (i === undefined) {
-                    i = parseInt(localStorage.getItem("xeh_config_idx")) || 0;
+                    i = parseInt(GM_getValue("xeh_config_idx", "0"));
+                }
+                if (i >= XEH.configs.length) {
+                    i = 0
                 }
 
-                XEH.configs[i].name = XEH.configs[i].name || "<未命名>";
+                var cfg = XEH.configs[i];
                 for (var j = 0; j < XEH.config_keys.length; j++) {
                     var k = XEH.config_keys[j];
-                    inputs[k].value = XEH.configs[i][k];
+                    inputs[k].value = cfg[k] || "";
                 }
 
                 return i;
             }
+
             function initJSONRPC(i) {
                 var cfg = XEH.configs[i]
                 jr = JSONRPC("http://" + (cfg.token ? ("token:" + cfg.token + "@") : "") +
@@ -297,15 +323,16 @@
 
             // add <select> first, its options will be filled later
             var configSet = document.createElement("select");
-            configSet.onchange = function (i) {
+            var configSetOnChangeHandler = function () {
                 if (hasNewConfigUnsaved) {
-                    configSet.remove(configSet.options.length - 1)
+                    this.remove(this.length - 1)
                     hasNewConfigUnsaved = false;
                 }
-                var i = configSet.selectedIndex
+                var i = this.selectedIndex
                 loadConfigSet(i)
                 initJSONRPC(i)
             }
+            configSet.onchange = configSetOnChangeHandler;
             controlsGrp.appendChild(newWrapperDiv("当前配置", configSet));
 
             configBox.appendChild(controlsGrp);
@@ -344,9 +371,24 @@
             });
             configBox.appendChild(addBtn);
 
-            var ojbkBtn = newButton("保存", "left: 100px; bottom: 5px;", function () {
+            var delBtn = newButton("删除", "left: 70px; bottom: 5px;", function () {
+                var i = configSet.selectedIndex;
+                configSet.remove(i);
+                configSet.selectedIndex = Math.max(i-1, 0);
+                hasNewConfigUnsaved = false;
+                XEH.configs.splice(i);
+                saveConfigSet(configSet);
+            });
+            configBox.appendChild(delBtn);
+
+            var ojbkBtn = newButton("保存", "left: 150px; bottom: 5px;", function (e) {
                 var idx = configSet.selectedIndex;
                 var cfg;
+                if (inputs.host.value == "" || parseInt(inputs.port.value) === undefined) {
+                    alert("地址不能为空，端口必须为数字");
+                    e.stopImmediatePropagation();
+                    return;
+                }
                 if (hasNewConfigUnsaved) {
                     hasNewConfigUnsaved = false
                     cfg = {}
@@ -354,23 +396,59 @@
                 } else {
                     cfg = XEH.configs[idx]
                 }
-                cfg.token = cfg.token || ""
+                inputs.name.value = inputs.name.value || (inputs.host.value + ":" + inputs.port.value);
                 for (var i = 0; i < XEH.config_keys.length; i++) {
                     var k = XEH.config_keys[i];
                     cfg[k] = inputs[k].value;
                 }
-                configSet.options.item(idx).text = cfg.name || (cfg.host + ":" + cfg.port);
-                saveConfigSet();
+                configSet.options.item(idx).text = cfg.name;
+                saveConfigSet(configSet);
                 initJSONRPC(idx);
             });
             configBox.appendChild(ojbkBtn);
 
-            var resetBtn = newButton("重置", "left: 150px; bottom: 5px;", function () {
+            var resetBtn = newButton("重置", "right: 5px; bottom: 5px;", function () {
                 loadConfigSet(configSet.selectedIndex)
             });
             configBox.appendChild(resetBtn);
-
             /****************** ends bottom buttons ************************/
+
+            /****************** starts duplicate ui ************************/
+            var closeBtn2 = closeBtn.cloneNode(true);
+            closeBtn2.style = "position: absolute; left: 200px; bottom: 5px;";
+            closeBtn2.onclick = closeBtn.onclick;
+            configBox.appendChild(closeBtn2);
+
+            var xehExportAnchor = document.getElementById("xeh_export");
+            if (xehExportAnchor) {
+                var configSet2 = configSet.cloneNode(true);
+                configSet2.style = configSet2.style + "; margin-left: 10px;"
+                configSet2.addEventListener("change", function () {
+                    configSet.selectedIndex = this.selectedIndex;
+                    saveConfigSet(this);
+                });
+                configSet2.addEventListener("change", configSetOnChangeHandler);
+
+                configSet.addEventListener("change", function () {
+                    configSet2.selectedIndex = this.selectedIndex;
+                })
+
+                delBtn.addEventListener("click", function () {
+                    var i = configSet2.selectedIndex;
+                    configSet2.remove(i);
+                    configSet2.selectedIndex = Math.max(i-1, 0);
+                });
+                ojbkBtn.addEventListener("click", function () {
+                    var i = configSet.selectedIndex;
+                    var c = document.createElement("option");
+                    c.text = XEH.configs[i].name;
+                    configSet2.options.add(c);
+                    configSet2.selectedIndex = i;
+                });
+                xehExportAnchor.parentNode.appendChild(configSet2);
+                configSet2.selectedIndex = shouldSelectedIdx;
+            }
+            /****************** ends duplicate ui ************************/
         }
     })(XEH);
 })();
