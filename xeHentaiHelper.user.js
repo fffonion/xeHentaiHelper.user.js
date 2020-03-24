@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.27
+// @version     0.30
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
@@ -116,7 +116,7 @@
 
     function newButton(label, style, f) {
         var btn = document.createElement("div");
-        btn.innerHTML = "<a href='javascript:void(0)'>" + label + "</a>";
+        btn.innerHTML = "<a href='javascript:void(0)' style='text-decoration: none'>" + label + "</a>";
         btn.style = "position: absolute; " + (style || "");
         btn.onclick = f;
         btn.className = "gt";
@@ -190,12 +190,17 @@
                         checked[allinps[i].value] = 1;
                     }
                 }
+                checked.ts = new Date().getTime();
                 GM_setValue("xeh_checked", JSON.stringify(checked));
             }
 
             function loadInputState() {
                 var checked = JSON.parse(GM_getValue("xeh_checked", "0"));
                 if (!checked) return;
+                // ignore saved states longer than 30 minutes
+                if (checked.ts && new Date().getTime() - checked.ts > 10 * 60 * 1000) {
+                    return;
+                }
                 for (var i = 0; i < allinps.length; ++i) {
                     if (checked[allinps[i].value] === 1) {
                         allinps[i].checked = true;
@@ -384,6 +389,15 @@
             configSet.selectedIndex = shouldSelectedIdx;
             initJSONRPC(shouldSelectedIdx)
             /****************** ends input areas ************************/
+
+            var webuiBtn = newButton("打开WebUI", "left: 20px; bottom: 60px; font-size: 12px;", function () {
+                window.open("https://xehentai.yooooo.us/#host=" + inputs.host.value +
+                            ",port=" + inputs.port.value + ",token=" + inputs.token.value +
+                            ",https=no",
+                            '_blank').focus();
+                win;
+            });
+            configBox.appendChild(webuiBtn);
 
             /****************** starts bottom buttons ************************/
             var addBtn = newButton("新建", "left: 20px; bottom: 5px;", function () {
