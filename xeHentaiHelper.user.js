@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.40
+// @version     0.41
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
@@ -256,7 +256,7 @@
                 var tbl = document.getElementsByClassName("itg")[0];
                 if (glnames[0].className.search(/gl\dt/) != -1) { // thumbnail is not a table
                     var tt = document.createElement("table");
-                    tt.className = "itg glte";
+                    tt.className = "itg";
                     tbl.parentNode.insertBefore(tt, tbl);
                     tbl = tt;
                     titleInnerHTML += "<tbody></tbody>";
