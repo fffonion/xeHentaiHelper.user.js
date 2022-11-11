@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        xeHentai Helper
-// @version     0.30
+// @version     0.40
 // @description Become a hentai
 // @namespace 	https://yooooo.us
 // @updateURL 	https://dl.yooooo.us/userscripts/xeHentaiHelper.user.js
@@ -110,7 +110,7 @@
         var input = document.createElement("input");
         input.type = "text";
         input.size = 50;
-        input.style = "margin-bottom: 5px"
+        input.style = "margin-bottom: 5px;"
         return input;
     }
 
@@ -211,12 +211,21 @@
                 e.stopPropagation();
                 saveInputState();
             };
+
+            var inputSize = "0.7em";
+            if (glnames[0].className.search(/gl\dm/) != -1) { // minimal, minimal+
+            } else if (glnames[0].className.search(/gl\dc/) != -1) { // compact
+                inputSize = "0.8em";
+            } else if (glnames[0].className.search(/gl\d[te]/) != 1) { // extended or thumbail mode
+                inputSize = "0.9em";
+            }
+
             var allinps = [];
             for (var i = 0; i < glnames.length; ++i) {
                 var glname = glnames[i];
                 var ip = document.createElement("input");
                 ip.type = "checkbox";
-                ip.style = "float:left;font-size:20px;top:0;";
+                ip.style = "float:left;font-size:20px;width:" + inputSize + ";height:" + inputSize + ";top:0;";
                 var href;
                 var href_dom = glname;
                 for (var j = 0; j < 3; j++) {
@@ -227,27 +236,39 @@
                 ip.value = decodeURIComponent(location.protocol + "//" + location.hostname + href[0]);
                 ip.onclick = inp_onclick;
                 var doms = href_dom.childNodes;
-                for (var j = 0; j < doms.length; j++) {
-                    if (doms[j].tagName === "A") {
-                        doms[j].insertBefore(ip, doms[j].childNodes[0]);
+                for (var k = 0; k < doms.length; k++) {
+                    if (doms[k].tagName === "A") {
+                        doms[k].insertBefore(ip, doms[k].childNodes[0]);
                     }
                 }
                 allinps.push(ip);
             }
             var titlebar = document.getElementsByClassName("itg")[0].childNodes[0].childNodes[0];
-            var titleInnerHTML = '<input type="checkbox" id="xeh_toogle" style="margin-left:9px;top:0;">反选</input>' +
+            var titleInnerHTML = '<input type="checkbox" id="xeh_toogle" style="margin-left:5px;top:0;font-size: 20px;width:##SIZE##;height:##SIZE##;">反选</input>' +
                 '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="xeh_clear" href="javascript:void(0)">清空</a>' +
                 '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="xeh_export" href="javascript:void(0)">导出选中项到xeHentai</a>';
+
+            titleInnerHTML = titleInnerHTML.replaceAll("##SIZE##", inputSize);
+
             if (glnames[0].className.search(/gl\d[te]/) != -1) { // extended or thumbail mode
-                var td = document.createElement("td");
-                td.innerHTML = titleInnerHTML;
-                td.style = "width: auto;position: absolute;left: 10px;font-size: 12px;";
-                var tr = document.getElementsByClassName("ptt")[0].childNodes[0].childNodes[0]
-                tr.insertBefore(td, tr.childNodes[0]);
+                var el = document.createElement("tr");
+                el.style = "padding:0;font-size:14px;";
+                var tbl = document.getElementsByClassName("itg")[0];
+                if (glnames[0].className.search(/gl\dt/) != -1) { // thumbnail is not a table
+                    var tt = document.createElement("table");
+                    tt.className = "itg glte";
+                    tbl.parentNode.insertBefore(tt, tbl);
+                    tbl = tt;
+                    titleInnerHTML += "<tbody></tbody>";
+                } else { // extended, shift right by one cell
+                    titleInnerHTML = "<td></td><td><div style='padding-left: 124px;'><a>" + titleInnerHTML + "</a></div></td>"
+                }
+                el.innerHTML = titleInnerHTML;
+                tbl.insertBefore(el, tbl.childNodes[0]);
             } else {
-                for (var j = 0; j < titlebar.childNodes.length; j++) {
-                    if (titlebar.childNodes[j].innerHTML.search(/title/i) !== -1) {
-                        titlebar.childNodes[j].innerHTML = titleInnerHTML;
+                for (var n = 0; n < titlebar.childNodes.length; n++) {
+                    if (titlebar.childNodes[n].innerHTML.search(/title/i) !== -1) {
+                        titlebar.childNodes[n].innerHTML = titleInnerHTML;
                     }
                 }
             }
@@ -327,7 +348,7 @@
                     XEH.configs = [{
                         "host": "localhost",
                         "port": 8010,
-                        "name": "<默认>"
+                        "name": "<默认(点右上角配置)>"
                     }];
                 }
                 if (i === undefined) {
@@ -391,8 +412,8 @@
             /****************** ends input areas ************************/
 
             var webuiBtn = newButton("打开WebUI", "left: 20px; bottom: 60px; font-size: 12px;", function () {
-                window.open("https://xehentai.yooooo.us/#host=" + inputs.host.value +
-                            ",port=" + inputs.port.value + ",token=" + inputs.token.value +
+                window.open("https://xehentai.yooooo.us/#host=" + inputs.host.value + 
+                            ",port=" + inputs.port.value + ",token=" + inputs.token.value + 
                             ",https=no",
                             '_blank').focus();
                 win;
@@ -464,7 +485,7 @@
             var xehExportAnchor = document.getElementById("xeh_export");
             if (xehExportAnchor) {
                 var configSet2 = configSet.cloneNode(true);
-                configSet2.style = configSet2.style + "; margin-left: 10px;"
+                configSet2.style = configSet2.style + "; margin-left: 10px;width:auto;"
                 configSet2.addEventListener("change", function () {
                     configSet.selectedIndex = this.selectedIndex;
                     saveConfigSet(this);
@@ -498,3 +519,4 @@
         }
     })(XEH);
 })();
+
